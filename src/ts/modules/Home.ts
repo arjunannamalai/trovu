@@ -31,6 +31,9 @@ export default class Home {
     this.queryInput = queryInput;
     this.env.setContext();
 
+    // Capture any ?pwa=<strategy> override for testing the PWA breakout path.
+    CallHandler.capturePwaBreakoutOverride();
+
     // Init environment.
     const params = Env.getParamsFromUrl();
     await this.env.populate(params);
@@ -54,6 +57,9 @@ export default class Home {
 
     // Toggle by query only after the query input is set.
     this.toggleByQuery();
+
+    // Show the armed PWA breakout strategy (only if one was set via ?pwa=).
+    CallHandler.showBreakoutBadge();
 
     if (this.env.debug) {
       this.env.logger.showLog();
