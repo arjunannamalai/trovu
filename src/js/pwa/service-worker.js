@@ -1,4 +1,6 @@
-const CACHE_NAME = "trovu-v1"; // Consider versioning your cache for easier updates
+// Bump CACHE_NAME whenever the set of precached assets changes; the activate
+// handler below purges any cache that does not match the current name.
+const CACHE_NAME = "trovu-v2";
 const urlsToCache = [
   "/",
   "/index.html",
@@ -19,40 +21,38 @@ const urlsToCache = [
 ];
 
 self.addEventListener("install", (event) => {
+  // Activate this worker as soon as it has finished installing, so updated
+  // code reaches the (installed) PWA without needing every tab to be closed.
+  self.skipWaiting();
+  event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(urlsToCache)));
+});
+
+self.addEventListener("activate", (event) => {
+  // Drop stale caches from previous versions, then take control of open clients.
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log("Opened cache");
-      return cache.addAll(urlsToCache);
-    }),
+    caches
+      .keys()
+      .then((keys) => Promise.all(keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))))
+      .then(() => self.clients.claim()),
   );
 });
 
-// Implement fetch event to handle requests
+// Network-first strategy: always try the network so the freshest code and data
+// are served when online (a previous cache-first worker pinned installed PWAs
+// to stale JS indefinitely). Fall back to the cache only when offline.
 self.addEventListener("fetch", (event) => {
+  if (event.request.method !== "GET") {
+    return;
+  }
   event.respondWith(
-    caches.match(event.request).then((response) => {
-      // Cache hit - return response
-      if (response) {
-        return response;
-      }
-      return fetch(event.request).then((response) => {
-        // Check if we received a valid response
-        if (!response || response.status !== 200 || response.type !== "basic") {
-          return response;
+    fetch(event.request)
+      .then((response) => {
+        if (response && response.status === 200 && response.type === "basic") {
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseToCache));
         }
-
-        // IMPORTANT: Clone the response. A response is a stream
-        // and because we want the browser to consume the response
-        // as well as the cache consuming the response, we need
-        // to clone it so we have two streams.
-        var responseToCache = response.clone();
-
-        caches.open(CACHE_NAME).then((cache) => {
-          cache.put(event.request, responseToCache);
-        });
-
         return response;
-      });
-    }),
+      })
+      .catch(() => caches.match(event.request)),
   );
 });

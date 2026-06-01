@@ -296,6 +296,17 @@ export default class Home {
       event.preventDefault();
     }
 
+    // Test command (usable from inside the installed PWA, which has no address
+    // bar): `pwatest <strategy>` arms a breakout strategy, `pwatest` clears it.
+    const pwaTestMatch = this.queryInput.value.trim().match(/^pwatest(?:\s+(\S+))?$/i);
+    if (pwaTestMatch) {
+      CallHandler.setPwaBreakoutStrategy(pwaTestMatch[1] ? pwaTestMatch[1].toLowerCase() : "");
+      this.queryInput.value = "";
+      document.getElementById("pwa-breakout-badge")?.remove();
+      CallHandler.showBreakoutBadge();
+      return;
+    }
+
     const isStandalone = this.env.isRunningStandalone();
     const isAndroid = /Android/i.test(window.navigator.userAgent);
     const query = this.queryInput.value;

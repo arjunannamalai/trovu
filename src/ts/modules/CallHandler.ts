@@ -100,6 +100,19 @@ export default class CallHandler {
     }
   }
 
+  /** Set (or, with an empty value, clear) the PWA breakout strategy override. */
+  static setPwaBreakoutStrategy(value: string) {
+    try {
+      if (value) {
+        window.localStorage.setItem("trovuPwaBreakout", value);
+      } else {
+        window.localStorage.removeItem("trovuPwaBreakout");
+      }
+    } catch {
+      // localStorage unavailable; ignore.
+    }
+  }
+
   /**
    * Show a small badge with the armed PWA breakout strategy, so it is visible
    * which strategy is being tested on-device. Only shown when an override was
